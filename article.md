@@ -31,6 +31,7 @@ This repository is a tiny, public showcase of that loop:
 - `demo.py` runs a realistic scenario where two plans have equal quality.
 - the first run returns `needs_input` with a specific question.
 - the second run applies the answer and returns `resolved` actions.
+- outcome feedback is stored and reused to auto-break future ties.
 
 The point is not model output quality. The point is process quality.
 
@@ -46,6 +47,7 @@ This demo includes that missing behavior:
 - **plan**: evaluate multiple valid repairs
 - **ask**: request exactly one missing decision
 - **replan**: continue from updated context
+- **learn**: persist feedback and bias future decisions
 
 If your workflow needs this `plan -> ask -> replan` pattern, you are no
 longer building a formatter. You are building an agent.

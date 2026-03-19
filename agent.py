@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -49,11 +51,14 @@ class FamilyConflictResolutionAgent:
         buffer_minutes: int = 15,
         max_shift_minutes: int = 120,
         max_turns: int = 3,
+        memory_path: str | None = "agent_memory.json",
     ) -> None:
         self.travel_minutes = travel_minutes or {}
         self.buffer_minutes = buffer_minutes
         self.max_shift_minutes = max_shift_minutes
         self.max_turns = max_turns
+        self.memory_path = Path(memory_path) if memory_path else None
+        self._memory = self._load_memory()
 
     def resolve(
         self,
@@ -109,6 +114,7 @@ class FamilyConflictResolutionAgent:
             actions.append(
                 {
                     "action": "move_event",
+                    "choice_id": pick.moved_event_id,
                     "event_id": old_event.event_id,
                     "from_start": old_event.start.strftime("%Y-%m-%d %H:%M"),
                     "from_end": old_event.end.strftime("%Y-%m-%d %H:%M"),
@@ -138,12 +144,83 @@ class FamilyConflictResolutionAgent:
             return candidates[0]
 
         preferred = (answers.get("preferred_move_event_id") or "").strip()
-        if not preferred:
-            return None
+        if preferred:
+            for candidate in candidates:
+                if candidate.moved_event_id == preferred:
+                    return candidate
+            return candidates[0]
+
+        learned = self._learned_preference(candidates)
+        if learned is not None:
+            return learned
+        return None
+
+    def record_outcome(self, chosen_move_event_id: str, success: bool) -> None:
+        choice_id = (chosen_move_event_id or "").strip()
+        if not choice_id:
+            return
+        key = "wins" if success else "losses"
+        bucket = self._memory.setdefault(key, {})
+        bucket[choice_id] = int(bucket.get(choice_id, 0)) + 1
+        self._save_memory()
+
+    def _learned_preference(self, candidates: list[Candidate]) -> Candidate | None:
+        wins = self._memory.get("wins", {})
+        losses = self._memory.get("losses", {})
+        best: Candidate | None = None
+        best_score: int | None = None
+        has_tie = False
+
         for candidate in candidates:
-            if candidate.moved_event_id == preferred:
-                return candidate
-        return candidates[0]
+            choice_id = candidate.moved_event_id
+            learned_score = int(wins.get(choice_id, 0)) - int(losses.get(choice_id, 0))
+            if best_score is None or learned_score > best_score:
+                best = candidate
+                best_score = learned_score
+                has_tie = False
+            elif learned_score == best_score:
+                has_tie = True
+
+        if best is None or best_score is None or best_score <= 0 or has_tie:
+            return None
+        return best
+
+    def _load_memory(self) -> dict[str, dict[str, int]]:
+        empty: dict[str, dict[str, int]] = {"wins": {}, "losses": {}}
+        if self.memory_path is None or not self.memory_path.exists():
+            return empty
+        try:
+            data = json.loads(self.memory_path.read_text(encoding="utf-8"))
+        except Exception:
+            return empty
+        if not isinstance(data, dict):
+            return empty
+        loaded: dict[str, dict[str, int]] = {"wins": {}, "losses": {}}
+        for key in ("wins", "losses"):
+            bucket = data.get(key, {})
+            if not isinstance(bucket, dict):
+                continue
+            for choice_id, value in bucket.items():
+                try:
+                    loaded[key][str(choice_id)] = int(value)
+                except Exception:
+                    continue
+        return loaded
+
+    def _save_memory(self) -> None:
+        if self.memory_path is None:
+            return
+        payload = {
+            "wins": self._memory.get("wins", {}),
+            "losses": self._memory.get("losses", {}),
+        }
+        try:
+            self.memory_path.write_text(
+                json.dumps(payload, indent=2, sort_keys=True),
+                encoding="utf-8",
+            )
+        except Exception:
+            pass
 
     def _build_candidates(
         self,

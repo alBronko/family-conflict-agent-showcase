@@ -12,6 +12,7 @@ Companion write-up: `article.md`.
 - Detects blocking conflicts (time overlap + travel/buffer constraints).
 - Generates multiple repair plans (move incoming event vs. move existing).
 - Requests human input when plans are equally good.
+- Stores simple outcome feedback and reuses it for future tie-breaks.
 - Re-runs with the answer and outputs executable calendar actions.
 
 ## Run
@@ -24,6 +25,7 @@ You will see:
 
 1. First pass: `needs_input` with a concrete question.
 2. Second pass: `resolved` after providing a preference.
+3. Third pass: same conflict auto-resolves from stored feedback.
 
 ## Files
 

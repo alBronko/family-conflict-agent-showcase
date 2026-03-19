@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .venv/
+agent_memory.json
+.demo_memory.json
