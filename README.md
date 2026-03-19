@@ -59,14 +59,9 @@ status: resolved
 action: add_event
 ```
 
-## Implementation Snapshot
-
-![Driver conflict diff](docs/images/driver-conflict-diff.png)
-
 ## Files
 
 - `agent.py` — conflict-resolution agent loop.
 - `brain.py` — system-prompt-driven decision brain.
 - `demo.py` — minimal reproducible scenario.
 - `SYSTEM_PROMPT.md` — brain policy contract.
-- `docs/images/` — screenshots used in this README.
