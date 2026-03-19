@@ -5,6 +5,8 @@ from dataclasses import dataclass, replace
 from datetime import datetime, timedelta
 from pathlib import Path
 
+from brain import ConflictResolutionBrain
+
 
 @dataclass(frozen=True)
 class Event:
@@ -52,6 +54,7 @@ class FamilyConflictResolutionAgent:
         max_shift_minutes: int = 120,
         max_turns: int = 3,
         memory_path: str | None = "agent_memory.json",
+        brain: ConflictResolutionBrain | None = None,
     ) -> None:
         self.travel_minutes = travel_minutes or {}
         self.buffer_minutes = buffer_minutes
@@ -59,6 +62,8 @@ class FamilyConflictResolutionAgent:
         self.max_turns = max_turns
         self.memory_path = Path(memory_path) if memory_path else None
         self._memory = self._load_memory()
+        self.brain = brain or ConflictResolutionBrain()
+        self._pending_question = ""
 
     def resolve(
         self,
@@ -97,11 +102,13 @@ class FamilyConflictResolutionAgent:
 
             pick = self._pick_candidate(candidates, answer_map)
             if pick is None:
-                options = ", ".join(candidate.moved_event_id for candidate in candidates[:4])
-                question = (
-                    "Multiple equal plans. Which event should move? "
-                    f"(answer: preferred_move_event_id=<id>, options: {options})"
-                )
+                question = self._pending_question.strip()
+                if not question:
+                    options = ", ".join(candidate.moved_event_id for candidate in candidates[:4])
+                    question = (
+                        "Multiple equal plans. Which event should move? "
+                        f"(answer: preferred_move_event_id=<id>, options: {options})"
+                    )
                 return Resolution("needs_input", actions, [question], notes)
 
             if pick.moved_event_id == "incoming":
@@ -133,6 +140,7 @@ class FamilyConflictResolutionAgent:
         candidates: list[Candidate],
         answers: dict[str, str],
     ) -> Candidate | None:
+        self._pending_question = ""
         if len(candidates) == 1:
             return candidates[0]
 
@@ -153,7 +161,29 @@ class FamilyConflictResolutionAgent:
         learned = self._learned_preference(candidates)
         if learned is not None:
             return learned
+
+        brain_decision = self.brain.decide(
+            candidates=[self._candidate_context(candidate) for candidate in candidates],
+            memory=self._memory,
+            context={"phase": "tie_break"},
+        )
+        if brain_decision.action == "select":
+            for candidate in candidates:
+                if candidate.moved_event_id == brain_decision.choice_id:
+                    return candidate
+        if brain_decision.action == "ask":
+            self._pending_question = brain_decision.question
         return None
+
+    @staticmethod
+    def _candidate_context(candidate: Candidate) -> dict[str, object]:
+        return {
+            "choice_id": candidate.moved_event_id,
+            "shift_minutes": candidate.score,
+            "reason": candidate.reason,
+            "new_start": candidate.moved_event.start.strftime("%Y-%m-%d %H:%M"),
+            "new_end": candidate.moved_event.end.strftime("%Y-%m-%d %H:%M"),
+        }
 
     def record_outcome(self, chosen_move_event_id: str, success: bool) -> None:
         choice_id = (chosen_move_event_id or "").strip()

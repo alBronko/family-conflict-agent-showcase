@@ -28,6 +28,8 @@ This repository is a tiny, public showcase of that loop:
 
 - `agent.py` implements conflict detection, candidate generation, and
   decision turns.
+- `SYSTEM_PROMPT.md` defines the decision policy.
+- `brain.py` applies that prompt and returns structured decisions.
 - `demo.py` runs a realistic scenario where two plans have equal quality.
 - the first run returns `needs_input` with a specific question.
 - the second run applies the answer and returns `resolved` actions.
