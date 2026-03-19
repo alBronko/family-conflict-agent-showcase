@@ -17,6 +17,8 @@ class Event:
     end: datetime
     location: str
     movable: bool = False
+    required_drivers: int = 0
+    driver_candidates: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -27,6 +29,8 @@ class Event:
             "end": self.end.strftime("%Y-%m-%d %H:%M"),
             "location": self.location,
             "movable": self.movable,
+            "required_drivers": self.required_drivers,
+            "driver_candidates": list(self.driver_candidates),
         }
 
 
@@ -317,20 +321,84 @@ class FamilyConflictResolutionAgent:
         schedule: list[Event],
         ignore_event_id: str | None,
     ) -> bool:
-        for existing in schedule:
-            if existing.event_id == ignore_event_id:
-                continue
-            if self._events_conflict(candidate, existing):
-                return False
-        return True
+        filtered_schedule = [
+            existing
+            for existing in schedule
+            if existing.event_id != ignore_event_id
+        ]
+        return not self._blocking_events(candidate, filtered_schedule)
 
     def _blocking_events(self, incoming: Event, schedule: list[Event]) -> list[Event]:
-        return [event for event in schedule if self._events_conflict(incoming, event)]
+        blockers: list[Event] = []
+        seen_event_ids: set[str] = set()
+
+        for event in schedule:
+            if not self._events_conflict(incoming, event):
+                continue
+            if event.event_id in seen_event_ids:
+                continue
+            seen_event_ids.add(event.event_id)
+            blockers.append(event)
+
+        for event in self._driver_blocking_events(incoming, schedule):
+            if event.event_id in seen_event_ids:
+                continue
+            seen_event_ids.add(event.event_id)
+            blockers.append(event)
+
+        return blockers
+
+    def _driver_blocking_events(self, target: Event, schedule: list[Event]) -> list[Event]:
+        required = max(0, int(target.required_drivers))
+        if required == 0 or not target.driver_candidates:
+            return []
+
+        candidates = tuple(
+            person
+            for person in dict.fromkeys(str(person).strip() for person in target.driver_candidates)
+            if person
+        )
+        if not candidates:
+            return []
+
+        required = min(required, len(candidates))
+        available = 0
+        blocking_events: list[Event] = []
+        seen_event_ids: set[str] = set()
+
+        for person in candidates:
+            person_blockers = self._person_conflicts_for_event(person, target, schedule)
+            if not person_blockers:
+                available += 1
+                continue
+            for event in person_blockers:
+                if event.event_id in seen_event_ids:
+                    continue
+                seen_event_ids.add(event.event_id)
+                blocking_events.append(event)
+
+        if available >= required:
+            return []
+        return blocking_events
+
+    def _person_conflicts_for_event(
+        self,
+        person: str,
+        target: Event,
+        schedule: list[Event],
+    ) -> list[Event]:
+        conflicts: list[Event] = []
+        for existing in schedule:
+            if existing.owner != person:
+                continue
+            if self._events_conflict_for_person(target, existing):
+                conflicts.append(existing)
+        return conflicts
 
     def _events_conflict(self, a: Event, b: Event) -> bool:
-        if self._overlap(a, b):
-            return True
-        return self._travel_gap_conflict(a, b)
+        if a.owner != b.owner:
+            return False
+        return self._events_conflict_for_person(a, b)
 
     @staticmethod
     def _overlap(a: Event, b: Event) -> bool:
@@ -340,6 +408,14 @@ class FamilyConflictResolutionAgent:
         if a.owner != b.owner:
             return False
 
+        return self._travel_gap_only_conflict(a, b)
+
+    def _events_conflict_for_person(self, a: Event, b: Event) -> bool:
+        if self._overlap(a, b):
+            return True
+        return self._travel_gap_only_conflict(a, b)
+
+    def _travel_gap_only_conflict(self, a: Event, b: Event) -> bool:
         if a.end <= b.start:
             gap = int((b.start - a.end).total_seconds() // 60)
             required = self._required_gap(a.location, b.location)

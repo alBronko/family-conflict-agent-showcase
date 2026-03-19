@@ -6,6 +6,12 @@ Mission:
 - prefer fewer moved events
 - prefer smaller time shifts
 - avoid moving fixed events unless explicitly allowed
+- enforce transport feasibility for dependent events
+
+Hard constraints you must respect:
+- if an event requires drivers, only treat it as feasible when enough listed
+  drivers are available for that time and travel context
+- do not resolve by ignoring dependency constraints
 
 When options are tied:
 - if one option has stronger historical wins than losses, select it
