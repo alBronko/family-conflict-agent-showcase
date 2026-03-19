@@ -35,15 +35,33 @@ You will see:
 2. Second pass: `resolved` after providing a preference.
 3. Third pass: same conflict auto-resolves from stored feedback.
 
-## Screenshots
+## Why It Matters
 
-Driver-availability conflict logic and owner-specific overlap fix:
+- Driving-dependent events now require available eligible drivers.
+- Shared resources (for example `family-car`) now block events while
+  unavailable (for example multi-day garage windows).
+
+## Example (Before vs After)
+
+```text
+Before:
+status: resolved
+issue: child driving event could pass while no driver/car was available
+
+After:
+status: needs_input
+question: No movable option found. Allow moving fixed events up to 120 minutes?
+```
+
+```text
+Available driver + car:
+status: resolved
+action: add_event
+```
+
+## Implementation Snapshot
 
 ![Driver conflict diff](docs/images/driver-conflict-diff.png)
-
-Real incident thread where a multi-day garage window blocks driving:
-
-![Car garage conflict thread](docs/images/car-garage-conflict-thread.png)
 
 ## Files
 
