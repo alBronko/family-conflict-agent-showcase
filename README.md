@@ -21,18 +21,27 @@ Companion write-up: `article.md`.
 
 ```mermaid
 flowchart TD
-    A[Incoming Event] --> B[Conflict Detection]
-    B -->|No conflict| Z[Accept Event]
-    B -->|Conflict| C[Generate Candidates]
-    C --> D[Agent Brain Decision]
-    D -->|Clear decision| E[Apply Actions]
-    D -->|Ambiguous| F[Ask User]
-    F --> G[User Input]
-    G --> C
-    D -->|No valid solution| H[Fail]
-    E --> I[Record Outcome]
-    I --> J[Update Memory]
-    J --> D
+    A[Real Case] --> B[Solve Once with Claude]
+    B --> C[Push Back on Shallow Output]
+    C --> D[Refined Reasoning]
+    D --> E{Good Enough?}
+    E -->|No| B
+    E -->|Yes| F[Freeze Decision Logic into Agent]
+
+    F --> G[Run Real Cases]
+    G --> H{Failure / Ambiguity?}
+    H -->|No| I[Apply Actions]
+    I --> J[Record Outcome]
+    J --> G
+
+    H -->|Yes| K[Diagnose Broken Assumption]
+    K --> L[Patch Agent Logic]
+    L --> M[Retest]
+    M --> H
+
+    L --> N[Inject Better Frameworks]
+    N --> O[Upgrade Agent Architecture]
+    O --> G
 ```
 
 ## Run
