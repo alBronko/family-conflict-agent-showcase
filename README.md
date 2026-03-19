@@ -5,6 +5,8 @@ Tiny, generic example of an **agentic family-scheduling workflow**.
 This project shows when a normal script is not enough: the system must
 plan, ask a follow-up question when decisions are ambiguous, and replan.
 
+Companion write-up: `article.md`.
+
 ## What It Demonstrates
 
 - Detects blocking conflicts (time overlap + travel/buffer constraints).
