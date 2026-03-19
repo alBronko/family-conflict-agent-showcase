@@ -17,6 +17,24 @@ Companion write-up: `article.md`.
 - Stores simple outcome feedback and reuses it for future tie-breaks.
 - Re-runs with the answer and outputs executable calendar actions.
 
+## Flow (Mermaid)
+
+```mermaid
+flowchart TD
+    A[Incoming Event] --> B[Conflict Detection]
+    B -->|No conflict| Z[Accept Event]
+    B -->|Conflict| C[Generate Candidates]
+    C --> D[Agent Brain Decision]
+    D -->|Clear decision| E[Apply Actions]
+    D -->|Ambiguous| F[Ask User]
+    F --> G[User Input]
+    G --> C
+    D -->|No valid solution| H[Fail]
+    E --> I[Record Outcome]
+    I --> J[Update Memory]
+    J --> D
+```
+
 ## Run
 
 ```bash
