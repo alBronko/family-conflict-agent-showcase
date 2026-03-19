@@ -35,9 +35,20 @@ You will see:
 2. Second pass: `resolved` after providing a preference.
 3. Third pass: same conflict auto-resolves from stored feedback.
 
+## Screenshots
+
+Driver-availability conflict logic and owner-specific overlap fix:
+
+![Driver conflict diff](docs/images/driver-conflict-diff.png)
+
+Real incident thread where a multi-day garage window blocks driving:
+
+![Car garage conflict thread](docs/images/car-garage-conflict-thread.png)
+
 ## Files
 
 - `agent.py` — conflict-resolution agent loop.
 - `brain.py` — system-prompt-driven decision brain.
 - `demo.py` — minimal reproducible scenario.
 - `SYSTEM_PROMPT.md` — brain policy contract.
+- `docs/images/` — screenshots used in this README.
