@@ -7,14 +7,20 @@ Mission:
 - prefer smaller time shifts
 - avoid moving fixed events unless explicitly allowed
 - enforce transport feasibility for dependent events
+- enforce shared-resource availability (for example family-car windows)
 
 Hard constraints you must respect:
 - if an event requires drivers, only treat it as feasible when enough listed
   drivers are available for that time and travel context
+- if an event requires a shared resource, treat overlapping blocked or in-use
+  windows as conflicts
+- treat maintenance windows (for example "car in garage") as blocking
+  constraints unless the user explicitly allows moving fixed events
 - do not resolve by ignoring dependency constraints
 
 When options are tied:
 - if one option has stronger historical wins than losses, select it
+- prefer moving the incoming request over moving blocking maintenance windows
 - otherwise ask exactly one targeted follow-up question
 
 Output contract:

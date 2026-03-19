@@ -19,6 +19,8 @@ class Event:
     movable: bool = False
     required_drivers: int = 0
     driver_candidates: tuple[str, ...] = ()
+    required_resources: tuple[str, ...] = ()
+    blocked_resources: tuple[str, ...] = ()
 
     def as_dict(self) -> dict[str, object]:
         return {
@@ -31,6 +33,8 @@ class Event:
             "movable": self.movable,
             "required_drivers": self.required_drivers,
             "driver_candidates": list(self.driver_candidates),
+            "required_resources": list(self.required_resources),
+            "blocked_resources": list(self.blocked_resources),
         }
 
 
@@ -333,7 +337,7 @@ class FamilyConflictResolutionAgent:
         seen_event_ids: set[str] = set()
 
         for event in schedule:
-            if not self._events_conflict(incoming, event):
+            if not self._events_conflict(incoming, event) and not self._resource_conflict(incoming, event):
                 continue
             if event.event_id in seen_event_ids:
                 continue
@@ -400,6 +404,22 @@ class FamilyConflictResolutionAgent:
             return False
         return self._events_conflict_for_person(a, b)
 
+    def _resource_conflict(self, a: Event, b: Event) -> bool:
+        if not self._overlap(a, b):
+            return False
+
+        a_required = self._normalized_resources(a.required_resources)
+        b_required = self._normalized_resources(b.required_resources)
+        a_blocked = self._normalized_resources(a.blocked_resources)
+        b_blocked = self._normalized_resources(b.blocked_resources)
+
+        return bool(
+            (a_required & b_required)
+            or (a_required & b_blocked)
+            or (b_required & a_blocked)
+            or (a_blocked & b_blocked)
+        )
+
     @staticmethod
     def _overlap(a: Event, b: Event) -> bool:
         return max(a.start, b.start) < min(a.end, b.end)
@@ -427,6 +447,14 @@ class FamilyConflictResolutionAgent:
             return gap < required
 
         return False
+
+    @staticmethod
+    def _normalized_resources(resources: tuple[str, ...]) -> set[str]:
+        return {
+            resource
+            for resource in (str(item).strip() for item in resources)
+            if resource
+        }
 
     def _required_gap(self, origin: str, destination: str) -> int:
         if origin == destination:
