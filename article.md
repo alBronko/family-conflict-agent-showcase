@@ -1,7 +1,3 @@
-
-
-It has been a while since I last wrote here.
-
 Recently, I have been thinking about agents—not from the angle of "how to build one," but why they matter at all. Most of the conversation today is still centered around prompts: how to phrase them, how to structure them, how to squeeze better answers out of a model. This framing is convenient, and it is also wrong.
 
 A prompt is a request. An agent is a way of thinking.
